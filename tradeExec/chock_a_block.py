@@ -3,6 +3,7 @@ import httplib2
 import configparser
 import os.path
 import os
+import pprint
 
 cfgFile = "tradeExec.cfg"
 if os.path.isfile(cfgFile):
@@ -21,16 +22,28 @@ else:
     exit(1)
 
 baseurl = config.get('Stockfighter', 'baseurl')
-venue = config.get('Chock a block', 'venue')
-symbol = config.get('Chock a block', 'symbol')
-account = config.get('Chock a block', 'account')
+
+order = {
+    'account': config.get('Chock a block', 'account'),
+    'venue': config.get('Chock a block', 'venue'),
+    'symbol': config.get('Chock a block', 'symbol'),
+    'price': config.get('Chock a block', 'price'),
+    'qty': 100,
+    'direction': 'buy',
+    'orderType': 'limit'
+}
 
 print('[+] Base URL: ' + baseurl)
-print('[+] Account: ' + account)
-print('[+] Venue: ' + venue)
-print('[+] Symbol: ' + symbol)
+print('[+] Account: ' + order['account'])
+print('[+] Venue: ' + order['venue'])
+print('[+] Symbol: ' + order['symbol'])
 
-#h = httplib2.Http(".cache")
-#(resp_headers, content) = h.request("http://dr.dk", "GET")
+urlstocks = baseurl + "/venues/" + order['venue'] + "/stocks"
+url = baseurl + "/venues/" + order['venue'] + "/stocks/" + order['symbol'] + "/orders"
 
-#print(content)
+h = httplib2.Http(".cache")
+(resp_headers, content) = h.request(urlstocks, "GET",
+                                    headers={'X-Starfighter-Authorization':apikey})
+
+
+pprint.pprint(content)
