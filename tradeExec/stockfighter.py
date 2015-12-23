@@ -37,7 +37,7 @@ class StockFighter:
             print("[!] Error retrieving orderbook: " + orderbook['error'])
 
     def placeOrder(self, order):
-        url = "https://api.stockfighter.io/ob/api/venues/"+order['venue']+"/stocks/"+order['stock']+"/orders"
+        url = "https://api.stockfighter.io/ob/api/venues/"+order['venue']+"/stocks/"+order['symbol']+"/orders"
         (resp_headers, content) = self.h.request(url, "POST", self.headers)
         order = json.loads(content.decode('UTF-8'))
         if order['ok']:
