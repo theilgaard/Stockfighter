@@ -1,49 +1,47 @@
 #!/usr/bin/python
-import httplib2
-import configparser
-import os.path
+import stockfighter
+import sys
 import os
-import pprint
+from time import sleep
 
-cfgFile = "tradeExec.cfg"
-if os.path.isfile(cfgFile):
-    config = configparser.RawConfigParser()
-    config.read(cfgFile)
-    print("[+] Config loaded: " + cfgFile)
-else:
-    print("[!] Config file not found: " + cfgFile)
+
+if len(sys.argv) != 4:
+    print("[!] usage: "+sys.argv[0]+" account venue stock")
     exit(1)
 
-apikey = os.environ.get('STOCKAPIKEY')
-if apikey is not None:
-    print("[+] API Key: " + apikey)
-else:
-    print("[!] API Key not set")
-    exit(1)
+account = sys.argv[1]
+venue = sys.argv[2]
+symbol = sys.argv[3]
 
-baseurl = config.get('Stockfighter', 'baseurl')
+print("[+] Account: " + account)
+print("[+] Venue: " + venue)
+print("[+] Symbol: " + symbol)
+
+apikey = os.environ.get('sfapi')
+if apikey is None:
+    print("[!] No API key set, set environment var sfapi!")
+    exit(1)
+sf = stockfighter.StockFighter(apikey)
 
 order = {
-    'account': config.get('Chock a block', 'account'),
-    'venue': config.get('Chock a block', 'venue'),
-    'symbol': config.get('Chock a block', 'symbol'),
-    'price': config.get('Chock a block', 'price'),
-    'qty': 100,
-    'direction': 'buy',
-    'orderType': 'limit'
+     'account': account,
+     'venue': venue,
+     'symbol': symbol,
+     'price': 5000,
+     'qty': 1000,
+     'direction': 'buy',
+     'orderType': 'limit'
 }
 
-print('[+] Base URL: ' + baseurl)
-print('[+] Account: ' + order['account'])
-print('[+] Venue: ' + order['venue'])
-print('[+] Symbol: ' + order['symbol'])
-
-urlstocks = baseurl + "/venues/" + order['venue'] + "/stocks"
-url = baseurl + "/venues/" + order['venue'] + "/stocks/" + order['symbol'] + "/orders"
-
-h = httplib2.Http(".cache")
-(resp_headers, content) = h.request(urlstocks, "GET",
-                                    headers={'X-Starfighter-Authorization':apikey})
-
-
-pprint.pprint(content)
+goal = 100000
+placedorders = 0
+orders = []
+while placedorders != goal:
+    sleep(0.5)
+    orderbook = sf.getOrderbook(venue, symbol)
+    if orderbook is not None and orderbook['asks'] is not None:
+        order['price'] = orderbook['asks'][0]['price']
+        print("[+] Placing order at price: " + str(order['price']) + ". Orders: "+str(placedorders)+"/"+str(goal))
+        o = sf.placeOrder(order)
+        orders.append(o)
+        placedorders += order['qty']
