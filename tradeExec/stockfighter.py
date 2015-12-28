@@ -3,6 +3,7 @@ import json
 
 class StockFighter:
     def __init__(self, apikey):
+        self.orders = {}
         self.headers = {'X-Starfighter-Authorization':apikey}
         self.http = httplib2.Http(".cache")
 
@@ -41,6 +42,16 @@ class StockFighter:
         (resp_headers, content) = self.http.request(url, "POST", headers=self.headers, body=json.dumps(order))
         orderreply = json.loads(content.decode('UTF-8'))
         if orderreply['ok']:
+            print("[+] Placed {} order [id: {} @ {}:{}] [Price: {}$] [Filled: {}/{}]".format(
+                    orderreply['direction'],
+                    orderreply['id'],
+                    order['venue'],
+                    order['symbol'],
+                    order['price'] / 100,
+                    orderreply['totalFilled'],
+                    order['qty']
+                ))
+            self.orders[orderreply['id']] = orderreply
             return orderreply
         else: 
             print("[!] Error placing order: " + orderreply['error'])
@@ -63,14 +74,17 @@ class StockFighter:
         else:
             print("[!] Error retrieving status for order: " + status['error'])
 
-    def cancelOrder(self, venue, stock, orderid):
-        url = "https://api.stockfighter.io/ob/api/venues/"+venue+"/stocks/"+stock+"/orders/"+orderid
-        (resp_headers, content) = self.http.request(url, "DELETE", headers=self.headers)
-        response = json.loads(content.decode('UTF-8'))
-        if response['ok']:
-            return response
-        else:
-            print("[!] Error cancelling order: " + response['error'])
+    def cancelOrder(self, venue, stock, order):
+        if order is not None:
+            url = "https://api.stockfighter.io/ob/api/venues/"+venue+"/stocks/"+stock+"/orders/"+str(order['id'])
+            (resp_headers, content) = self.http.request(url, "DELETE", headers=self.headers)
+            response = json.loads(content.decode('UTF-8'))
+            if response['ok']:
+                print("[+] Cancelled order: " + str(order['id']))
+                self.orders[order['id']] = None
+                return response
+            else:
+                print("[!] Error cancelling order: " + response['error'])
 
     def getOrders(self, venue, account, stock=None):
         url = ''
@@ -85,3 +99,29 @@ class StockFighter:
         else:
             print("[!] Error retrieving orders: " + orders['error'])
 
+    def getQuoteSpread(self, quote):
+        if quote is not None:
+            if 'ask' not in quote:
+                print("[!] 'ask' not in quote")
+                return -1
+            if 'bid' not in quote:
+                print("[!] 'bid' not in quote")
+                return -2
+            return quote['ask'] - quote['bid']
+        else:
+            print("[!] Quote was None")
+            return -1
+
+    def getSpread(self, orderbook):
+        if orderbook is None:
+            print("[!] Orderbook was None")
+            return -1
+        asks = orderbook['asks']
+        bids = orderbook['bids']
+        if asks is None:
+            print("[!] 'asks' was None")
+            return -2
+        if bids is None:
+            print("[!] 'bids' was None")
+            return -3
+        return asks[0] - bids[0]
